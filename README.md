@@ -333,5 +333,5 @@ MIT © [henrique062](https://github.com/henrique062)
 ---
 
 <p align="center">
-  Desenvolvido com ❤️ • Powered by <a href="https://odds-api.io">odds-api.io</a>
+  Desenvolvido com ❤️ • Powered by @henrique062
 </p>
