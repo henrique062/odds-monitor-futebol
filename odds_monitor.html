@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Odds Monitor — Futebol 1x2 ao Vivo</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0d14;
+        --surface: #10141f;
+        --card: #161b29;
+        --border: #1e2640;
+        --accent: #4f8ef7;
+        --accent2: #8b5cf6;
+        --green: #22c55e;
+        --yellow: #eab308;
+        --red: #ef4444;
+        --text: #e2e8f0;
+        --muted: #64748b;
+        --live: #ef4444;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      /* ---- HEADER ---- */
+      header {
+        background: linear-gradient(135deg, #0f1929 0%, #131b2e 100%);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 1.25rem;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .logo span {
+        font-size: 1.5rem;
+      }
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .badge.connected {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .badge.disconnected {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--red);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .badge.neutral {
+        background: rgba(79, 142, 247, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(79, 142, 247, 0.2);
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .dot.pulse {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      /* ---- API KEY FORM ---- */
+      #setup {
+        max-width: 540px;
+        margin: 80px auto;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 40px;
+      }
+      #setup h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      #setup p {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 28px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus {
+        border-color: var(--accent);
+      }
+      .form-group select option {
+        background: var(--surface);
+      }
+      .btn-primary {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+
+      /* ---- FILTERS BAR ---- */
+      #filters {
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+      #filters label {
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      #filters input {
+        flex: 1;
+        min-width: 200px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 14px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.88rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      #filters input:focus {
+        border-color: var(--accent);
+      }
+      .filter-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .filter-btn.active {
+        background: rgba(79, 142, 247, 0.15);
+        color: var(--accent);
+        border-color: rgba(79, 142, 247, 0.4);
+      }
+      #stats-row {
+        padding: 12px 24px;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+      }
+      .stat {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+      }
+      .stat .val {
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      /* ---- TABLE ---- */
+      #main {
+        padding: 20px 24px 40px;
+      }
+      .league-block {
+        margin-bottom: 28px;
+      }
+      .league-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+        padding: 0 4px;
+      }
+      .league-title .count {
+        background: rgba(79, 142, 247, 0.15);
+        color: var(--accent);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+      }
+      .table-wrap {
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.87rem;
+      }
+      thead th {
+        background: var(--surface);
+        padding: 10px 14px;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+      }
+      thead th.c {
+        text-align: center;
+      }
+      tbody tr {
+        border-top: 1px solid var(--border);
+        transition: background 0.15s;
+      }
+      tbody tr:hover {
+        background: var(--surface);
+      }
+      tbody tr.new-row {
+        animation: flashRow 0.8s ease;
+      }
+      @keyframes flashRow {
+        0% {
+          background: rgba(79, 142, 247, 0.18);
+        }
+        100% {
+          background: transparent;
+        }
+      }
+      tbody td {
+        padding: 10px 14px;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+      tbody td.c {
+        text-align: center;
+      }
+      .team-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .teams-line {
+        font-weight: 600;
+        font-size: 0.88rem;
+      }
+      .time-line {
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+      .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--live);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+      .pre-badge {
+        background: rgba(100, 116, 139, 0.1);
+        color: var(--muted);
+        border: 1px solid rgba(100, 116, 139, 0.25);
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        display: inline-block;
+      }
+      .odd-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.92rem;
+        padding: 6px 10px;
+        border-radius: 8px;
+        min-width: 52px;
+        transition: all 0.25s;
+      }
+      .odd-low {
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+      }
+      .odd-mid {
+        background: rgba(234, 179, 8, 0.1);
+        color: #facc15;
+      }
+      .odd-high {
+        background: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+      }
+      .odd-none {
+        background: rgba(100, 116, 139, 0.1);
+        color: var(--muted);
+      }
+      .odd-flash {
+        animation: oddFlash 0.5s ease;
+      }
+      @keyframes oddFlash {
+        0% {
+          box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.6);
+        }
+        100% {
+          box-shadow: none;
+        }
+      }
+      .bookie-tag {
+        background: rgba(79, 142, 247, 0.08);
+        color: var(--accent);
+        border-radius: 6px;
+        padding: 2px 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .id-cell {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-family: monospace;
+      }
+      #empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--muted);
+      }
+      #empty-state .emoji {
+        font-size: 3rem;
+        margin-bottom: 16px;
+      }
+      #empty-state p {
+        font-size: 0.95rem;
+      }
+      #log-section {
+        margin-top: 8px;
+      }
+      .log-toggle {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 0;
+        font-family: inherit;
+      }
+      .log-toggle:hover {
+        color: var(--text);
+      }
+      #log-box {
+        background: #060810;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        height: 160px;
+        overflow-y: auto;
+        font-size: 0.78rem;
+        font-family: monospace;
+        color: #94a3b8;
+        margin-top: 8px;
+      }
+      .log-line {
+        margin-bottom: 4px;
+      }
+      .log-line .ts {
+        color: var(--muted);
+      }
+      .log-line .msg-ok {
+        color: var(--green);
+      }
+      .log-line .msg-err {
+        color: var(--red);
+      }
+      .log-line .msg-info {
+        color: var(--accent);
+      }
+      .log-line .msg-warn {
+        color: var(--yellow);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER -->
+    <header>
+      <div class="logo">
+        <span>⚽</span>Odds Monitor
+        <span
+          style="
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #64748b;
+            margin-left: 4px;
+          "
+          >1x2 Futebol</span
+        >
+      </div>
+      <div class="status-bar">
+        <div class="badge neutral" id="update-badge">
+          🔄 <span id="update-count">0</span> updates
+        </div>
+        <div class="badge neutral" id="match-badge">
+          📋 <span id="match-count">0</span> jogos
+        </div>
+        <div class="badge disconnected" id="ws-badge">
+          <div class="dot" id="ws-dot"></div>
+          <span id="ws-label">Desconectado</span>
+        </div>
+        <div class="badge neutral" id="time-badge">
+          🕐 <span id="clock">--:--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- SETUP FORM -->
+    <div id="setup">
+      <h2>🔑 Configurar API Key</h2>
+      <p>
+        Informe sua chave da
+        <a
+          href="https://odds-api.io"
+          target="_blank"
+          style="color: var(--accent)"
+          >odds-api.io</a
+        >
+        para começar a receber odds em tempo real.
+      </p>
+      <div class="form-group">
+        <label>API Key</label>
+        <input
+          type="text"
+          id="api-key-input"
+          placeholder="Sua API Key aqui..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="form-group">
+        <label>Status dos Jogos</label>
+        <select id="status-select">
+          <option value="">Todos (live + prematch)</option>
+          <option value="live">Só ao vivo</option>
+          <option value="prematch">Só pré-jogo</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="connect-btn" onclick="startMonitor()">
+        ▶ Conectar e Monitorar
+      </button>
+    </div>
+
+    <!-- DASHBOARD (hidden initially) -->
+    <div id="dashboard" style="display: none">
+      <!-- FILTRO RAPIDO -->
+      <div id="filters">
+        <label>Buscar:</label>
+        <input
+          type="text"
+          id="search-box"
+          placeholder="Time, liga, bookie..."
+          oninput="renderTable()"
+        />
+        <button class="filter-btn active" id="f-all" onclick="setFilter('all')">
+          Todos
+        </button>
+        <button class="filter-btn" id="f-live" onclick="setFilter('live')">
+          🔴 Ao vivo
+        </button>
+        <button
+          class="filter-btn"
+          id="f-prematch"
+          onclick="setFilter('prematch')"
+        >
+          ⚪ Pré-jogo
+        </button>
+        <button
+          class="filter-btn"
+          style="margin-left: auto; color: var(--red)"
+          onclick="disconnect()"
+        >
+          ✕ Desconectar
+        </button>
+      </div>
+
+      <div id="stats-row">
+        <div class="stat">Jogos: <span class="val" id="s-total">0</span></div>
+        <div class="stat">
+          Ao vivo:
+          <span class="val" id="s-live" style="color: var(--red)">0</span>
+        </div>
+        <div class="stat">Pré-jogo: <span class="val" id="s-pre">0</span></div>
+        <div class="stat">
+          Ligas ativas: <span class="val" id="s-leagues">0</span>
+        </div>
+        <div class="stat">
+          Updates: <span class="val" id="s-updates">0</span>
+        </div>
+        <div class="stat" id="reconnect-stat" style="display: none">
+          Reconectando... <span class="val" id="s-retry">0</span>/10
+        </div>
+      </div>
+
+      <div id="main">
+        <div id="empty-state">
+          <div class="emoji">📡</div>
+          <p>Aguardando dados da API...</p>
+        </div>
+      </div>
+
+      <div id="main-log" style="padding: 0 24px 24px">
+        <div id="log-section">
+          <button class="log-toggle" onclick="toggleLog()">
+            ▶ Mostrar log de eventos
+          </button>
+          <div id="log-box" style="display: none"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ============================================================
+      // CONFIG
+      // ============================================================
+      const LEAGUES = [
+        "england-premier-league",
+        "spain-la-liga",
+        "germany-bundesliga",
+        "italy-serie-a",
+        "france-ligue-1",
+        "netherlands-eredivisie",
+        "portugal-primeira-liga",
+        "brazil-serie-a",
+        "brazil-serie-b",
+        "argentina-primera-division",
+        "usa-mls",
+        "mexico-liga-mx",
+        "champions-league",
+        "europa-league",
+        "conference-league",
+        "england-championship",
+        "scotland-premiership",
+        "turkey-super-lig",
+        "greece-super-league",
+        "belgium-first-division-a",
+      ];
+
+      const REST_BASE = "https://api.odds-api.io/v3";
+      const WS_BASE = "wss://api.odds-api.io/v3/ws";
+
+      // ============================================================
+      // STATE
+      // ============================================================
+      let matches = {}; // id -> match obj
+      let ws = null;
+      let apiKey = "";
+      let statusFilter = "";
+      let viewFilter = "all";
+      let updateCount = 0;
+      let reconnectN = 0;
+      let reconnectTimer = null;
+
+      // ============================================================
+      // UTILS
+      // ============================================================
+      function log(msg, type = "info") {
+        const lb = document.getElementById("log-box");
+        if (!lb) return;
+        const now = new Date().toLocaleTimeString("pt-BR");
+        const div = document.createElement("div");
+        div.className = "log-line";
+        div.innerHTML = `<span class="ts">[${now}]</span> <span class="msg-${type}">${msg}</span>`;
+        lb.prepend(div);
+        if (lb.children.length > 200) lb.removeChild(lb.lastChild);
+      }
+
+      function clock() {
+        document.getElementById("clock").textContent =
+          new Date().toLocaleTimeString("pt-BR");
+      }
+      setInterval(clock, 1000);
+
+      function toggleLog() {
+        const lb = document.getElementById("log-box");
+        const btn = document.querySelector(".log-toggle");
+        if (lb.style.display === "none") {
+          lb.style.display = "block";
+          btn.textContent = "▼ Ocultar log";
+        } else {
+          lb.style.display = "none";
+          btn.textContent = "▶ Mostrar log de eventos";
+        }
+      }
+
+      function setWsStatus(state) {
+        const badge = document.getElementById("ws-badge");
+        const dot = document.getElementById("ws-dot");
+        const lbl = document.getElementById("ws-label");
+        badge.className =
+          "badge " + (state === "connected" ? "connected" : "disconnected");
+        dot.className = "dot " + (state === "connected" ? "pulse" : "");
+        lbl.textContent = state === "connected" ? "Conectado" : "Desconectado";
+      }
+
+      function oddClass(v) {
+        const f = parseFloat(v);
+        if (isNaN(f)) return "odd-none";
+        if (f < 2.0) return "odd-low";
+        if (f < 3.5) return "odd-mid";
+        return "odd-high";
+      }
+      function fmtOdd(v) {
+        const f = parseFloat(v);
+        if (isNaN(f) || !v) return `<div class="odd-cell odd-none">–</div>`;
+        return `<div class="odd-cell ${oddClass(v)}">${f.toFixed(2)}</div>`;
+      }
+      function fmtTime(s) {
+        if (!s) return "–";
+        try {
+          const d = new Date(s);
+          return d.toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch (e) {
+          return s;
+        }
+      }
+
+      function parseML(markets) {
+        if (!markets) return null;
+        for (const m of markets) {
+          if (m.name?.toUpperCase() === "ML") {
+            const o = m.odds?.[0] || {};
+            if (o.home || o.draw || o.away)
+              return { home: o.home, draw: o.draw, away: o.away };
+          }
+        }
+        return null;
+      }
+      function parseTeams(data) {
+        let home = "",
+          away = "";
+        const p = data.participants || data.teams || [];
+        if (Array.isArray(p) && p.length >= 2) {
+          home = typeof p[0] === "object" ? p[0].name || "" : p[0];
+          away = typeof p[1] === "object" ? p[1].name || "" : p[1];
+        }
+        if (!home) home = data.home_team || data.home || "";
+        if (!away) away = data.away_team || data.away || "";
+        if (!home && !away) {
+          const n = data.name || "";
+          const sep = n.includes(" vs ") ? " vs " : " - ";
+          const pts = n.split(sep, 2);
+          if (pts.length === 2) {
+            home = pts[0].trim();
+            away = pts[1].trim();
+          }
+        }
+        return { home, away };
+      }
+      function parseLeague(data) {
+        let lg = data.league || "";
+        if (typeof lg === "object") lg = lg.slug || lg.name || "outras";
+        return lg || data.league_slug || "outras";
+      }
+
+      // ============================================================
+      // RENDER
+      // ============================================================
+      function renderTable() {
+        const main = document.getElementById("main");
+        const search = document
+          .getElementById("search-box")
+          .value.toLowerCase()
+          .trim();
+
+        let all = Object.values(matches);
+
+        // Filtro view
+        if (viewFilter === "live") all = all.filter((m) => m.status === "live");
+        if (viewFilter === "prematch")
+          all = all.filter((m) => m.status !== "live");
+
+        // Search
+        if (search) {
+          all = all.filter((m) => {
+            const str =
+              `${m.home} ${m.away} ${m.liga} ${m.bookie}`.toLowerCase();
+            return str.includes(search);
+          });
+        }
+
+        // Stats
+        const live = all.filter((x) => x.status === "live").length;
+        const ligas = new Set(all.map((x) => x.liga)).size;
+        document.getElementById("s-total").textContent = all.length;
+        document.getElementById("s-live").textContent = live;
+        document.getElementById("s-pre").textContent = all.length - live;
+        document.getElementById("s-leagues").textContent = ligas;
+        document.getElementById("s-updates").textContent = updateCount;
+        document.getElementById("match-count").textContent = all.length;
+        document.getElementById("update-count").textContent = updateCount;
+
+        if (all.length === 0) {
+          main.innerHTML = `<div id="empty-state"><div class="emoji">📡</div><p>Nenhum jogo encontrado</p></div>`;
+          return;
+        }
+
+        // Agrupa por liga
+        const byLeague = {};
+        all.forEach((m) => {
+          (byLeague[m.liga] || (byLeague[m.liga] = [])).push(m);
+        });
+
+        let html = "";
+        for (const [liga, games] of Object.entries(byLeague).sort()) {
+          const sorted = games.sort((a, b) =>
+            (a.starts_at || "").localeCompare(b.starts_at || ""),
+          );
+          html += `
+    <div class="league-block">
+      <div class="league-title">🏆 ${liga} <span class="count">${games.length}</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Jogo</th>
+              <th class="c">Status</th>
+              <th class="c">Casa</th>
+              <th class="c">X</th>
+              <th class="c">Fora</th>
+              <th>Bookie</th>
+              <th>ID</th>
+            </tr>
+          </thead>
+          <tbody id="tb-${liga.replace(/[^a-z]/gi, "_")}">
+            ${sorted
+              .map(
+                (g) => `
+            <tr id="row-${g.id}" class="${g._new ? "new-row" : ""}">
+              <td>
+                <div class="team-cell">
+                  <div class="teams-line">${g.home || "?"} <span style="color:var(--muted)">×</span> ${g.away || "?"}</div>
+                  <div class="time-line">⏰ ${fmtTime(g.starts_at)}</div>
+                </div>
+              </td>
+              <td class="c">${
+                g.status === "live"
+                  ? `<span class="live-badge"><div class="dot pulse" style="background:var(--red)"></div>AO VIVO</span>`
+                  : `<span class="pre-badge">Pré-jogo</span>`
+              }
+              </td>
+              <td class="c">${fmtOdd(g.ml?.home)}</td>
+              <td class="c">${fmtOdd(g.ml?.draw)}</td>
+              <td class="c">${fmtOdd(g.ml?.away)}</td>
+              <td><span class="bookie-tag">${g.bookie || "–"}</span></td>
+              <td class="id-cell">${g.id}</td>
+            </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+          // Clear new flag
+          games.forEach((g) => {
+            if (matches[g.id]) matches[g.id]._new = false;
+          });
+        }
+        main.innerHTML = html;
+      }
+
+      let renderPending = false;
+      function scheduleRender() {
+        if (!renderPending) {
+          renderPending = true;
+          requestAnimationFrame(() => {
+            renderPending = false;
+            renderTable();
+          });
+        }
+      }
+
+      // ============================================================
+      // SNAPSHOT REST
+      // ============================================================
+      async function fetchSnapshot() {
+        log(`Buscando snapshot inicial (${LEAGUES.length} ligas)...`, "info");
+        const params = new URLSearchParams({
+          apiKey: apiKey,
+          sport: "football",
+          leagues: LEAGUES.join(","),
+          markets: "ML",
+        });
+        if (statusFilter) params.set("status", statusFilter);
+        try {
+          const res = await fetch(`${REST_BASE}/odds?${params}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const evts = Array.isArray(data)
+            ? data
+            : data.data || data.events || [];
+          evts.forEach((ev) => {
+            const eid = String(ev.id || "");
+            if (!eid) return;
+            const { home, away } = parseTeams(ev);
+            const ml = parseML(ev.markets || ev.odds || []);
+            matches[eid] = {
+              id: eid,
+              home,
+              away,
+              starts_at: ev.starts_at || ev.start_time || "",
+              status: ev.status || "prematch",
+              liga: parseLeague(ev),
+              bookie: ev.bookmaker || ev.bookie || "",
+              ml: ml || {},
+            };
+          });
+          log(`Snapshot OK — ${evts.length} eventos carregados`, "ok");
+          scheduleRender();
+        } catch (e) {
+          log(`Snapshot falhou: ${e.message} — aguardando WebSocket`, "warn");
+        }
+      }
+
+      // ============================================================
+      // WEBSOCKET
+      // ============================================================
+      function buildWsUrl() {
+        const p = new URLSearchParams({
+          apiKey,
+          markets: "ML",
+          sport: "football",
+          leagues: LEAGUES.join(","),
+        });
+        if (statusFilter) p.set("status", statusFilter);
+        return `${WS_BASE}?${p}`;
+      }
+
+      function connectWs() {
+        if (ws) {
+          try {
+            ws.close();
+          } catch (e) {}
+        }
+        log("Conectando ao WebSocket...", "info");
+        ws = new WebSocket(buildWsUrl());
+
+        ws.onopen = () => {
+          reconnectN = 0;
+          document.getElementById("reconnect-stat").style.display = "none";
+          setWsStatus("connected");
+          log("WebSocket conectado!", "ok");
+        };
+
+        ws.onclose = (ev) => {
+          setWsStatus("disconnected");
+          log(`Desconectado (code=${ev.code})`, "warn");
+          autoReconnect();
+        };
+
+        ws.onerror = (e) => {
+          log(`Erro WebSocket: ${e.message || "desconhecido"}`, "err");
+        };
+
+        ws.onmessage = (ev) => {
+          let data;
+          try {
+            data = JSON.parse(ev.data);
+          } catch (e) {
+            return;
+          }
+          handleWsMessage(data);
+        };
+      }
+
+      function handleWsMessage(data) {
+        const t = data.type;
+        if (t === "welcome") {
+          log(
+            `Bem-vindo! Bookmakers: ${(data.bookmakers || []).join(", ")}`,
+            "ok",
+          );
+          if (data.warning) log("⚠ " + data.warning, "warn");
+          return;
+        }
+        const eid = String(data.id || "");
+        if (!eid) return;
+
+        if (t === "deleted") {
+          delete matches[eid];
+          log(`Removido: ${eid}`, "info");
+          scheduleRender();
+          return;
+        }
+
+        if (t === "created" || t === "updated") {
+          const ml = parseML(data.markets || []);
+          if (!ml) return;
+          updateCount++;
+
+          if (!matches[eid]) {
+            const { home, away } = parseTeams(data);
+            matches[eid] = {
+              id: eid,
+              home,
+              away,
+              starts_at: data.starts_at || "",
+              status: data.status || "prematch",
+              liga: parseLeague(data),
+              bookie: data.bookie || "",
+              ml,
+              _new: true,
+            };
+            log(
+              `Novo jogo: ${eid} — ${matches[eid].home} x ${matches[eid].away} @ ${data.bookie}`,
+              "ok",
+            );
+          } else {
+            matches[eid].ml = ml;
+            matches[eid].status = data.status || matches[eid].status;
+            matches[eid].bookie = data.bookie || matches[eid].bookie;
+            // Flash da linha
+            const row = document.getElementById(`row-${eid}`);
+            if (row) {
+              row.classList.remove("new-row");
+              void row.offsetWidth;
+              row.classList.add("new-row");
+            }
+          }
+          scheduleRender();
+        }
+      }
+
+      function autoReconnect() {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectN++;
+        if (reconnectN > 10) {
+          log("Máximo de reconexões atingido.", "err");
+          return;
+        }
+        const delay = Math.min(1000 * Math.pow(2, reconnectN), 60000);
+        document.getElementById("reconnect-stat").style.display = "flex";
+        document.getElementById("s-retry").textContent = reconnectN;
+        log(`Reconectando em ${delay / 1000}s... (${reconnectN}/10)`, "warn");
+        reconnectTimer = setTimeout(() => connectWs(), delay);
+      }
+
+      function disconnect() {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        if (ws) {
+          try {
+            ws.close(1000, "user");
+          } catch (e) {}
+          ws = null;
+        }
+        matches = {};
+        updateCount = 0;
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("setup").style.display = "block";
+        setWsStatus("disconnected");
+        log("Desconectado pelo usuário", "warn");
+      }
+
+      function setFilter(f) {
+        viewFilter = f;
+        ["all", "live", "prematch"].forEach((id) => {
+          document
+            .getElementById(`f-${id}`)
+            .classList.toggle("active", id === f);
+        });
+        renderTable();
+      }
+
+      async function startMonitor() {
+        apiKey = document.getElementById("api-key-input").value.trim();
+        if (!apiKey) {
+          alert("Por favor insira a API Key.");
+          return;
+        }
+        statusFilter = document.getElementById("status-select").value;
+
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+
+        await fetchSnapshot();
+        connectWs();
+      }
+
+      // Allow pressing Enter on input
+      document.addEventListener("DOMContentLoaded", () => {
+        document
+          .getElementById("api-key-input")
+          .addEventListener("keydown", (e) => {
+            if (e.key === "Enter") startMonitor();
+          });
+      });
+    </script>
+  </body>
+</html>
