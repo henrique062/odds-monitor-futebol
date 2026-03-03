@@ -1,0 +1,58 @@
+.wrap { padding: 20px 24px 40px; }
+.statsRow {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  padding: 10px 4px 16px; font-size: 0.84rem; color: #64748b;
+}
+.statsRow b { color: #4f8ef7; }
+.leagueBlock { margin-bottom: 28px; }
+.ligaTitle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 10px; padding: 0 4px;
+}
+.ligaCount {
+  background: rgba(79,142,247,.15); color: #4f8ef7;
+  padding: 2px 8px; border-radius: 999px; font-size: 0.74rem;
+}
+.tableWrap { border-radius: 12px; border: 1px solid #1c2338; overflow: hidden; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.table thead th {
+  background: #0f1420; padding: 10px 14px;
+  text-align: left; font-size: 0.74rem; font-weight: 700;
+  color: #64748b; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap;
+}
+.table tbody tr { border-top: 1px solid #1c2338; transition: background .15s; }
+.table tbody tr:hover { background: #0f1420; }
+.table tbody td { padding: 10px 14px; white-space: nowrap; vertical-align: middle; }
+.center { text-align: center; }
+.teamCell { display: flex; flex-direction: column; gap: 2px; }
+.teams { font-weight: 600; font-size: 0.88rem; }
+.vs { color: #64748b; }
+.time { font-size: 0.74rem; color: #64748b; }
+.liveBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(239,68,68,.15); color: #ef4444;
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 999px; padding: 3px 9px; font-size: 0.72rem; font-weight: 700;
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #ef4444;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.preBadge {
+  background: rgba(100,116,139,.1); color: #64748b;
+  border: 1px solid rgba(100,116,139,.2);
+  border-radius: 999px; padding: 3px 9px; font-size: 0.72rem; font-weight: 600;
+  display: inline-block;
+}
+.bookie {
+  background: rgba(79,142,247,.08); color: #4f8ef7;
+  border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; font-weight: 600;
+}
+.id { color: #64748b; font-size: 0.76rem; font-family: monospace; }
+.newRow { animation: flash .8s ease; }
+@keyframes flash { 0%{background:rgba(79,142,247,.15)} 100%{background:transparent} }
+.empty { text-align: center; padding: 80px 20px; color: #64748b; font-size: 1rem; }
+.empty div { font-size: 3rem; margin-bottom: 16px; }

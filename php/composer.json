@@ -1,0 +1,13 @@
+{
+  "name": "odds-monitor-php",
+  "description": "Monitor de odds 1x2 futebol via WebSocket - PHP",
+  "require": {
+    "textalk/websocket": "^1.7",
+    "guzzlehttp/guzzle": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "OddsMonitor\\": "src/"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "odds-monitor-nodejs",
+  "version": "1.0.0",
+  "description": "Monitor de odds 1x2 futebol via WebSocket - Node.js",
+  "main": "odds_monitor.js",
+  "scripts": {
+    "start": "node odds_monitor.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

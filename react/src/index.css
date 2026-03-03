@@ -1,0 +1,25 @@
+/* ── Reset & Variables ─────────────────────────────────────── */
+:root {
+  --bg: #080c14;
+  --surface: #0f1420;
+  --card: #141927;
+  --border: #1c2338;
+  --accent: #4f8ef7;
+  --accent2: #8b5cf6;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --muted: #64748b;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
