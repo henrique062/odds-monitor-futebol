@@ -12,38 +12,66 @@ const LEAGUES = [
 const REST_BASE = 'https://api.odds-api.io/v3';
 const WS_BASE   = 'wss://api.odds-api.io/v3/ws';
 
+function or(val, fallback) { return (val !== null && val !== undefined) ? val : fallback; }
+
 function parseTeams(ev) {
-  let home = '', away = '';
-  const parts = ev.participants ?? ev.teams ?? [];
+  var home = '', away = '';
+  var parts = or(ev.participants, or(ev.teams, []));
   if (Array.isArray(parts) && parts.length >= 2) {
-    home = typeof parts[0] === 'object' ? (parts[0].name ?? '') : parts[0];
-    away = typeof parts[1] === 'object' ? (parts[1].name ?? '') : parts[1];
+    home = typeof parts[0] === 'object' ? or(parts[0].name, '') : parts[0];
+    away = typeof parts[1] === 'object' ? or(parts[1].name, '') : parts[1];
   }
-  if (!home) home = ev.home_team ?? ev.home ?? '';
-  if (!away) away = ev.away_team ?? ev.away ?? '';
+  if (!home) home = or(ev.home_team, or(ev.home, ''));
+  if (!away) away = or(ev.away_team, or(ev.away, ''));
   if (!home && !away) {
-    const n = ev.name ?? '';
-    const sep = n.includes(' vs ') ? ' vs ' : ' - ';
-    const pts = n.split(sep, 2);
-    if (pts.length === 2) { home = pts[0].trim(); away = pts[1].trim(); }
+    var n = or(ev.name, '');
+    var sep = n.indexOf(' vs ') !== -1 ? ' vs ' : ' - ';
+    var pts = n.split(sep);
+    if (pts.length >= 2) { home = pts[0].trim(); away = pts.slice(1).join(sep).trim(); }
   }
-  return { home, away };
+  return { home: home, away: away };
 }
 
 function parseLeague(ev) {
-  let lg = ev.league ?? '';
-  if (typeof lg === 'object') return lg.slug ?? lg.name ?? 'outras';
-  return ev.league_slug ?? lg || 'outras';
+  var lg = or(ev.league, '');
+  if (typeof lg === 'object' && lg !== null) return or(lg.slug, or(lg.name, 'outras'));
+  return or(ev.league_slug, lg || 'outras');
 }
 
-function parseML(markets = []) {
-  for (const m of markets) {
-    if ((m.name ?? '').toUpperCase() === 'ML') {
-      const o = m.odds?.[0] ?? {};
-      if (o.home || o.draw || o.away) return { home: o.home, draw: o.draw, away: o.away };
+function parseML(markets) {
+  if (!markets) return null;
+  for (var i = 0; i < markets.length; i++) {
+    var m = markets[i];
+    if ((or(m.name, '')).toUpperCase() === 'ML') {
+      var odds = m.odds;
+      var o = (odds && odds.length > 0) ? odds[0] : {};
+      if (o.home || o.draw || o.away) {
+        return { home: o.home, draw: o.draw, away: o.away };
+      }
     }
   }
   return null;
+}
+
+function buildSnapshot(events) {
+  var snap = {};
+  events.forEach(function(ev) {
+    var eid = String(or(ev.id, ''));
+    if (!eid) return;
+    var teams = parseTeams(ev);
+    var ml = parseML(or(ev.markets, or(ev.odds, [])));
+    snap[eid] = {
+      id: eid,
+      home: teams.home,
+      away: teams.away,
+      starts_at: or(ev.starts_at, or(ev.start_time, '')),
+      status: or(ev.status, 'prematch'),
+      liga: parseLeague(ev),
+      bookie: or(ev.bookmaker, or(ev.bookie, '')),
+      ml: ml || {},
+    };
+  });
+  return snap;
 }
 
 export function useOddsWebSocket(apiKey, statusFilter) {
@@ -51,116 +79,137 @@ export function useOddsWebSocket(apiKey, statusFilter) {
   const [wsStatus,    setWsStatus]    = useState('disconnected');
   const [updateCount, setUpdateCount] = useState(0);
   const [logs,        setLogs]        = useState([]);
-  const wsRef         = useRef(null);
-  const retryRef      = useRef(0);
-  const retryTimer    = useRef(null);
+  const wsRef      = useRef(null);
+  const retryRef   = useRef(0);
+  const retryTimer = useRef(null);
 
-  const addLog = useCallback((msg, type = 'info') => {
-    const ts = new Date().toLocaleTimeString('pt-BR');
-    setLogs(prev => [{ ts, msg, type, id: Date.now() + Math.random() }, ...prev].slice(0, 200));
+  const addLog = useCallback(function(msg, type) {
+    if (!type) type = 'info';
+    var ts = new Date().toLocaleTimeString('pt-BR');
+    setLogs(function(prev) {
+      return [{ ts: ts, msg: msg, type: type, id: Date.now() + Math.random() }].concat(prev).slice(0, 200);
+    });
   }, []);
 
-  // REST snapshot
-  const fetchSnapshot = useCallback(async () => {
+  const fetchSnapshot = useCallback(function() {
     addLog('Buscando snapshot inicial (REST)...', 'info');
-    const params = new URLSearchParams({ apiKey, sport: 'football', leagues: LEAGUES.join(','), markets: 'ML' });
+    var params = new URLSearchParams({
+      apiKey: apiKey, sport: 'football',
+      leagues: LEAGUES.join(','), markets: 'ML',
+    });
     if (statusFilter) params.set('status', statusFilter);
-    try {
-      const res  = await fetch(`${REST_BASE}/odds?${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const evts = Array.isArray(data) ? data : (data.data ?? data.events ?? []);
-      const snap = {};
-      evts.forEach(ev => {
-        const eid = String(ev.id ?? '');
-        if (!eid) return;
-        const { home, away } = parseTeams(ev);
-        const ml = parseML(ev.markets ?? ev.odds ?? []);
-        snap[eid] = { id: eid, home, away, starts_at: ev.starts_at ?? '', status: ev.status ?? 'prematch', liga: parseLeague(ev), bookie: ev.bookmaker ?? ev.bookie ?? '', ml: ml ?? {} };
+    return fetch(REST_BASE + '/odds?' + params.toString())
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        var events = Array.isArray(data) ? data : or(data.data, or(data.events, []));
+        setMatches(buildSnapshot(events));
+        addLog('Snapshot OK — ' + events.length + ' eventos', 'ok');
+      })
+      .catch(function(e) {
+        addLog('Snapshot falhou: ' + e.message, 'warn');
       });
-      setMatches(snap);
-      addLog(`Snapshot OK — ${evts.length} eventos`, 'ok');
-    } catch (e) {
-      addLog(`Snapshot falhou: ${e.message}`, 'warn');
-    }
   }, [apiKey, statusFilter, addLog]);
 
-  // WebSocket connect
-  const connect = useCallback(() => {
-    if (wsRef.current) { try { wsRef.current.close(); } catch (_) {} }
-    const p = new URLSearchParams({ apiKey, sport: 'football', leagues: LEAGUES.join(','), markets: 'ML' });
+  const connect = useCallback(function() {
+    if (wsRef.current) { try { wsRef.current.close(); } catch(ex) {} }
+    var p = new URLSearchParams({
+      apiKey: apiKey, sport: 'football',
+      leagues: LEAGUES.join(','), markets: 'ML',
+    });
     if (statusFilter) p.set('status', statusFilter);
-    const url = `${WS_BASE}?${p}`;
+    var url = WS_BASE + '?' + p.toString();
     addLog('Conectando ao WebSocket...', 'info');
-    const ws = new WebSocket(url);
+    var ws = new WebSocket(url);
     wsRef.current = ws;
 
-    ws.onopen = () => {
+    ws.onopen = function() {
       retryRef.current = 0;
       setWsStatus('connected');
       addLog('WebSocket conectado!', 'ok');
     };
 
-    ws.onclose = (ev) => {
+    ws.onclose = function(ev) {
       setWsStatus('disconnected');
-      addLog(`Desconectado (code=${ev.code})`, 'warn');
+      addLog('Desconectado (code=' + ev.code + ')', 'warn');
       retryRef.current++;
       if (retryRef.current <= 10) {
-        const delay = Math.min(1000 * Math.pow(2, retryRef.current), 60000);
-        addLog(`Reconectando em ${delay / 1000}s... (${retryRef.current}/10)`, 'warn');
+        var delay = Math.min(1000 * Math.pow(2, retryRef.current), 60000);
+        addLog('Reconectando em ' + Math.round(delay/1000) + 's... (' + retryRef.current + '/10)', 'warn');
         retryTimer.current = setTimeout(connect, delay);
       } else {
         addLog('Máximo de reconexões atingido.', 'err');
       }
     };
 
-    ws.onerror = () => addLog('Erro no WebSocket', 'err');
+    ws.onerror = function() { addLog('Erro no WebSocket', 'err'); };
 
-    ws.onmessage = (ev) => {
-      let data;
-      try { data = JSON.parse(ev.data); } catch { return; }
-      const { type } = data;
+    ws.onmessage = function(ev) {
+      var data;
+      try { data = JSON.parse(ev.data); } catch(ex) { return; }
+      var type = data.type;
       if (type === 'welcome') {
-        addLog(data.message ?? 'Bem-vindo!', 'ok');
+        addLog(or(data.message, 'Bem-vindo!'), 'ok');
         if (data.warning) addLog('⚠ ' + data.warning, 'warn');
         return;
       }
-      const eid = String(data.id ?? '');
+      var eid = String(or(data.id, ''));
       if (!eid) return;
+
       if (type === 'deleted') {
-        setMatches(prev => { const n = { ...prev }; delete n[eid]; return n; });
+        setMatches(function(prev) {
+          var n = Object.assign({}, prev);
+          delete n[eid];
+          return n;
+        });
         return;
       }
+
       if (type === 'created' || type === 'updated') {
-        const ml = parseML(data.markets ?? []);
+        var ml = parseML(or(data.markets, []));
         if (!ml) return;
-        setUpdateCount(c => c + 1);
-        setMatches(prev => {
-          const existing = prev[eid];
+        setUpdateCount(function(c) { return c + 1; });
+        setMatches(function(prev) {
+          var existing = prev[eid];
           if (!existing) {
-            const { home, away } = parseTeams(data);
-            return { ...prev, [eid]: { id: eid, home, away, starts_at: data.starts_at ?? '', status: data.status ?? 'prematch', liga: parseLeague(data), bookie: data.bookie ?? '', ml, _new: true } };
+            var teams = parseTeams(data);
+            var entry = {
+              id: eid, home: teams.home, away: teams.away,
+              starts_at: or(data.starts_at, ''),
+              status: or(data.status, 'prematch'),
+              liga: parseLeague(data),
+              bookie: or(data.bookie, ''),
+              ml: ml, _new: true,
+            };
+            return Object.assign({}, prev, { [eid]: entry });
           }
-          return { ...prev, [eid]: { ...existing, ml, status: data.status ?? existing.status, bookie: data.bookie ?? existing.bookie } };
+          var updated = Object.assign({}, existing, {
+            ml: ml,
+            status: or(data.status, existing.status),
+            bookie: or(data.bookie, existing.bookie),
+          });
+          return Object.assign({}, prev, { [eid]: updated });
         });
       }
     };
   }, [apiKey, statusFilter, addLog]);
 
-  useEffect(() => {
+  useEffect(function() {
     if (!apiKey) return;
     fetchSnapshot().then(connect);
-    return () => {
+    return function() {
       if (retryTimer.current) clearTimeout(retryTimer.current);
-      if (wsRef.current) { try { wsRef.current.close(1000, 'cleanup'); } catch (_) {} }
+      if (wsRef.current) { try { wsRef.current.close(1000, 'cleanup'); } catch(ex) {} }
     };
-  }, [apiKey, statusFilter]); // eslint-disable-line
+  }, [apiKey, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(function() {
     if (retryTimer.current) clearTimeout(retryTimer.current);
-    if (wsRef.current) { try { wsRef.current.close(1000, 'user'); } catch (_) {} }
+    if (wsRef.current) { try { wsRef.current.close(1000, 'user'); } catch(ex) {} }
     setWsStatus('disconnected');
   }, []);
 
-  return { matches, wsStatus, updateCount, logs, disconnect };
+  return { matches: matches, wsStatus: wsStatus, updateCount: updateCount, logs: logs, disconnect: disconnect };
 }

@@ -43,7 +43,10 @@ export function MatchTable({ matches, viewFilter, search }) {
       all = all.filter(m => `${m.home} ${m.away} ${m.liga} ${m.bookie}`.toLowerCase().includes(q));
     }
     const map = {};
-    all.forEach(m => { (map[m.liga] ??= []).push(m); });
+    all.forEach(function(m) {
+      if (!map[m.liga]) map[m.liga] = [];
+      map[m.liga].push(m);
+    });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [matches, viewFilter, search]);
 
